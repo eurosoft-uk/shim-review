@@ -1,0 +1,75 @@
+# Use a stable ARM64 Ubuntu base
+FROM --platform=linux/arm64 ubuntu:focal-20200403 AS builder
+
+# -------------------------------
+# ✅ Reproducibility Environment
+# -------------------------------
+ENV DEBIAN_FRONTEND=noninteractive \
+    SOURCE_DATE_EPOCH=1600000000 \
+    FORCE_DETERMINISTIC=1 \
+    LC_ALL=C \
+    TZ=UTC
+
+# -------------------------------
+# ✅ Install dependencies
+# -------------------------------
+RUN apt update && apt install -y \
+    git \
+    build-essential \
+    gcc-aarch64-linux-gnu \
+    g++-aarch64-linux-gnu \
+    binutils-aarch64-linux-gnu \
+    gnu-efi \
+    libssl-dev \
+    python3 \
+    dos2unix \
+    hexdump \
+    bsdmainutils \
+    patch \
+    sbsigntool \
+    xz-utils && \
+    apt clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# -------------------------------
+# ✅ Prepare working directory
+# -------------------------------
+WORKDIR /root
+
+# Copy SBAT, cert, and patch
+COPY sbat.csv /root/sbat.csv
+COPY pub.der /root/pub.der
+COPY 0001-Customize-shim-embed-edfdiags-loader-and-update-defa.patch /root/
+
+# -------------------------------
+# ✅ Clone shim and apply patch
+# -------------------------------
+RUN git clone https://github.com/rhboot/shim.git
+
+WORKDIR /root/shim
+
+
+# Checkout fixed version
+RUN git submodule update --init --recursive
+
+# Normalize SBAT file (line endings)
+RUN dos2unix /shim-review/data/sbat.csv
+
+# -------------------------------
+# ✅ Build shim for AArch64
+# -------------------------------
+RUN echo "DEFINES += -DDEFAULT_LOADER='L\"\\\\edfiags-aa64.efi\"'" > Make.local && \
+    echo "DEFINES += -DDEFAULT_LOADER_CHAR='\"\\\\edfiags-aa64.efi\"'" >> Make.local && \
+    echo "DEFINES += -DNO_BUILTIN_TIMESTAMP" >> Make.local
+
+RUN make clean && \
+    make CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64 \
+         VENDOR_CERT_FILE=/root/pub.der SBAT=/root/sbat.csv
+
+# Strip binary like upstream
+RUN strip --strip-unneeded shimaa64.efi
+
+# -------------------------------
+# ✅ Output final binary for export
+# -------------------------------
+RUN mkdir -p /out && cp shimaa64.efi /out/shimaa64.efi

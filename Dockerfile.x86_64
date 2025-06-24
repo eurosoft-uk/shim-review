@@ -1,0 +1,70 @@
+# Use Ubuntu Focal as base image
+FROM ubuntu:22.04 AS builder
+
+# Set deterministic build environment
+ENV DEBIAN_FRONTEND=noninteractive \
+    SOURCE_DATE_EPOCH=1600000000
+
+# Copy local files into container
+COPY . /shim-review
+
+WORKDIR /root
+
+# Install dependencies
+RUN apt update && \
+    apt install -y \
+        git \
+        build-essential \
+        gcc \
+        g++ \
+        make \
+        binutils \
+        libssl-dev \
+        ca-certificates \
+        dos2unix \
+        pesign \
+        bsdmainutils \
+        xz-utils && \
+    apt clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Clone Red Hat's official Shim repo
+RUN git clone https://github.com/rhboot/shim.git 
+
+# Move into the Shim directory
+WORKDIR /root/shim
+
+RUN git submodule update --init --recursive
+
+
+# Write Make.local using 'override' to prevent conflict
+RUN echo "override DEFINES += -DDEFAULT_LOADER='L\"\\\\esdiags-x64.efi\"'" > Make.local && \
+    echo "override DEFINES += -DDEFAULT_LOADER_CHAR='\"\\\\esdiags-x64.efi\"'" >> Make.local
+
+# Debug: Show contents of Make.local
+RUN cat Make.local
+
+# Build Shim
+RUN make clean && \
+    make VENDOR_CERT_FILE=/shim-review/data/pub.der \
+         SBAT=/shim-review/data/sbat.csv
+
+RUN objcopy --remove-section=.note.gnu.build-id \
+            --remove-section=.build-id \
+            --remove-section=.debug_info \
+            --remove-section=.debug_abbrev \
+            --remove-section=.debug_line \
+            --remove-section=.debug_str \
+            --remove-section=.comment \
+            --strip-all \
+            /root/shim/shimx64.efi /root/shim/shimx64-stripped.efi         
+
+RUN objcopy --strip-all /shim-review/data/shimx64.efi /shim-review/data/shimx64-stripped.efi
+
+# Compare built binary with provided one
+RUN hexdump -Cv /shim-review/data/shimx64-stripped.efi > /orig.hex && \
+    hexdump -Cv /root/shim/shimx64-stripped.efi > /built.hex && \
+    diff -u /orig.hex /built.hex || (echo "Binary mismatch!" && exit 1)
+
+# Optional: Save the built binary outside the working directory
+#RUN cp /root/shim/shimx64.efi /shim-built-x64.efi
