@@ -24,6 +24,7 @@ RUN apt update && \
         dos2unix \
         pesign \
         bsdmainutils \
+        xxd \
         xz-utils && \
     apt clean && \
     rm -rf /var/lib/apt/lists/*
@@ -61,10 +62,20 @@ RUN objcopy --remove-section=.note.gnu.build-id \
 
 RUN objcopy --strip-all /shim-review/data/shimx64.efi /shim-review/data/shimx64-stripped.efi
 
-# Compare built binary with provided one
-RUN hexdump -Cv /shim-review/data/shimx64-stripped.efi > /orig.hex && \
-    hexdump -Cv /root/shim/shimx64-stripped.efi > /built.hex && \
-    diff -u /orig.hex /built.hex || (echo "Binary mismatch!" && exit 1)
 
-# Optional: Save the built binary outside the working directory
-#RUN cp /root/shim/shimx64.efi /shim-built-x64.efi
+# Compare binaries
+
+RUN xxd /shim-review/data/shimx64-stripped.efi > /tmp/ref.hex
+RUN xxd /root/shim/shimx64-stripped.efi > /tmp/built.hex
+
+# Compare them
+RUN diff -u /tmp/ref.hex /tmp/built.hex || (echo "❌ Binary mismatch after stripping!" && exit 1)
+
+# Final step: Create /out and copy both original and stripped binaries
+RUN mkdir -p /out
+
+# Original unstripped binary (final output)
+RUN cp /root/shim/shimx64.efi /out/
+
+# Optional: Stripped binary for inspection
+RUN cp /root/shim/shimx64-stripped.efi /out/

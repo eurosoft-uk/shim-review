@@ -1,75 +1,86 @@
-# Use a stable ARM64 Ubuntu base
-FROM --platform=linux/arm64 ubuntu:focal-20200403 AS builder
+# Use Ubuntu Focal as base image
+FROM ubuntu:22.04 AS builder
 
-# -------------------------------
-# ✅ Reproducibility Environment
-# -------------------------------
+# Set deterministic build environment
 ENV DEBIAN_FRONTEND=noninteractive \
-    SOURCE_DATE_EPOCH=1600000000 \
-    FORCE_DETERMINISTIC=1 \
-    LC_ALL=C \
-    TZ=UTC
+    SOURCE_DATE_EPOCH=1600000000
 
-# -------------------------------
-# ✅ Install dependencies
-# -------------------------------
-RUN apt update && apt install -y \
-    git \
-    build-essential \
-    gcc-aarch64-linux-gnu \
-    g++-aarch64-linux-gnu \
-    binutils-aarch64-linux-gnu \
-    gnu-efi \
-    libssl-dev \
-    python3 \
-    dos2unix \
-    hexdump \
-    bsdmainutils \
-    patch \
-    sbsigntool \
-    xz-utils && \
+# Copy local files into container
+COPY . /shim-review
+
+WORKDIR /root
+
+# Install dependencies
+RUN apt update && \
+    apt install -y \
+        git \
+        build-essential \
+        gcc \
+        g++ \
+        make \
+        binutils \
+        libssl-dev \
+        ca-certificates \
+        dos2unix \
+        pesign \
+        bsdmainutils \
+        gcc-aarch64-linux-gnu \
+        g++-aarch64-linux-gnu \
+        xxd \
+        xz-utils && \
     apt clean && \
     rm -rf /var/lib/apt/lists/*
 
-# -------------------------------
-# ✅ Prepare working directory
-# -------------------------------
-WORKDIR /root
+RUN apt-cache policy git build-essential gcc g++ make binutils libssl-dev ca-certificates dos2unix pesign xxd xz-utils bsdmainutils gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+# Clone Red Hat's official Shim repo
+RUN git clone https://github.com/rhboot/shim.git 
 
-# Copy SBAT, cert, and patch
-COPY sbat.csv /root/sbat.csv
-COPY pub.der /root/pub.der
-COPY 0001-Customize-shim-embed-edfdiags-loader-and-update-defa.patch /root/
-
-# -------------------------------
-# ✅ Clone shim and apply patch
-# -------------------------------
-RUN git clone https://github.com/rhboot/shim.git
-
+# Move into the Shim directory
 WORKDIR /root/shim
 
-
-# Checkout fixed version
 RUN git submodule update --init --recursive
 
-# Normalize SBAT file (line endings)
-RUN dos2unix /shim-review/data/sbat.csv
 
-# -------------------------------
-# ✅ Build shim for AArch64
-# -------------------------------
-RUN echo "DEFINES += -DDEFAULT_LOADER='L\"\\\\edfiags-aa64.efi\"'" > Make.local && \
-    echo "DEFINES += -DDEFAULT_LOADER_CHAR='\"\\\\edfiags-aa64.efi\"'" >> Make.local && \
-    echo "DEFINES += -DNO_BUILTIN_TIMESTAMP" >> Make.local
+# Write Make.local using 'override' to prevent conflict
+RUN echo "override DEFINES += -DDEFAULT_LOADER='L\"\\\\esdiags-aa64.efi\"'" > Make.local && \
+    echo "override DEFINES += -DDEFAULT_LOADER_CHAR='\"\\\\esdiags-aa64.efi\"'" >> Make.local
 
+# Debug: Show contents of Make.local
+RUN cat Make.local
+
+# Build Shim
 RUN make clean && \
-    make CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64 \
-         VENDOR_CERT_FILE=/root/pub.der SBAT=/root/sbat.csv
+    make CROSS_COMPILE=aarch64-linux-gnu- ARCH=aarch64 \
+         VENDOR_CERT_FILE=/shim-review/data/pub.der \
+         SBAT=/shim-review/data/sbat.csv
 
-# Strip binary like upstream
-RUN strip --strip-unneeded shimaa64.efi
+RUN aarch64-linux-gnu-objcopy --remove-section=.note.gnu.build-id \
+            --remove-section=.build-id \
+            --remove-section=.debug_info \
+            --remove-section=.debug_abbrev \
+            --remove-section=.debug_line \
+            --remove-section=.debug_str \
+            --remove-section=.comment \
+            --strip-all \
+            /root/shim/shimaa64.efi /root/shim/shimaa64-stripped.efi         
 
-# -------------------------------
-# ✅ Output final binary for export
-# -------------------------------
-RUN mkdir -p /out && cp shimaa64.efi /out/shimaa64.efi
+
+# Strip reference binary too
+RUN aarch64-linux-gnu-objcopy --strip-all /shim-review/data/shimaa64.efi /shim-review/data/shimaa64-stripped.efi
+
+# Compare binaries
+
+RUN xxd /shim-review/data/shimaa64-stripped.efi > /tmp/ref.hex
+RUN xxd /root/shim/shimaa64-stripped.efi > /tmp/built.hex
+
+# Compare them
+RUN diff -u /tmp/ref.hex /tmp/built.hex || (echo "❌ Binary mismatch after stripping!" && exit 1)
+
+# Final step: Create /out and copy both original and stripped binaries
+RUN mkdir -p /out
+
+# Original unstripped binary (final output)
+RUN cp /root/shim/shimaa64.efi /out/
+
+# Optional: Stripped binary for inspection
+RUN cp /root/shim/shimaa64-stripped.efi /out/
