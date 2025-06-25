@@ -1,0 +1,2 @@
+override DEFINES += -DDEFAULT_LOADER='L"\\esdiags-x64.efi"'
+override DEFINES += -DDEFAULT_LOADER_CHAR='"\\esdiags-x64.efi"'

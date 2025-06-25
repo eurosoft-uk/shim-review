@@ -13,21 +13,26 @@ WORKDIR /root
 # Install dependencies
 RUN apt update && \
     apt install -y \
-        git \
-        build-essential \
-        gcc \
-        g++ \
-        make \
-        binutils \
-        libssl-dev \
-        ca-certificates \
-        dos2unix \
-        pesign \
-        bsdmainutils \
-        xxd \
-        xz-utils && \
+    git=1:2.34.1-1ubuntu1.12 \
+    build-essential=12.9ubuntu3 \
+    gcc=4:11.2.0-1ubuntu1 \
+    g++=4:11.2.0-1ubuntu1 \
+    make=4.3-4.1build1 \
+    binutils=2.38-4ubuntu2.8 \
+    libssl-dev=3.0.2-0ubuntu1.19 \
+    ca-certificates=20240203~22.04.1 \
+    dos2unix=7.4.2-2 \
+    pesign=0.112-6 \
+    xxd=2:8.2.3995-1ubuntu2.24 \
+    xz-utils=5.2.5-2ubuntu1 \
+    bsdmainutils=12.1.7+nmu3ubuntu2 && \
     apt clean && \
     rm -rf /var/lib/apt/lists/*
+
+RUN apt-cache policy git build-essential gcc g++ make binutils libssl-dev ca-certificates dos2unix pesign xxd xz-utils bsdmainutils 
+
+ARG SHIM_COMMIT=b86b909f1e8281e0f30c3b5b5f697de185135f98
+ARG SHIM_ARCHIVE_HASH=ed10b432434fb703ef75fcfd705762e8a616e542f4a8346290d115180f721479
 
 # Clone Red Hat's official Shim repo
 RUN git clone https://github.com/rhboot/shim.git 
@@ -35,6 +40,7 @@ RUN git clone https://github.com/rhboot/shim.git
 # Move into the Shim directory
 WORKDIR /root/shim
 
+RUN git checkout ${SHIM_COMMIT}
 RUN git submodule update --init --recursive
 
 
@@ -47,7 +53,7 @@ RUN cat Make.local
 
 # Build Shim
 RUN make clean && \
-    make VENDOR_CERT_FILE=/shim-review/data/pub.der \
+    make V=s VENDOR_CERT_FILE=/shim-review/data/pub.der \
          SBAT=/shim-review/data/sbat.csv
 
 RUN objcopy --remove-section=.note.gnu.build-id \
@@ -73,6 +79,16 @@ RUN diff -u /tmp/ref.hex /tmp/built.hex || (echo "❌ Binary mismatch after stri
 
 # Final step: Create /out and copy both original and stripped binaries
 RUN mkdir -p /out
+
+RUN sha256sum /usr/bin/gcc /usr/bin/g++ /usr/bin/ld /usr/bin/objcopy /usr/bin/make /usr/bin/git > /out/toolchain-hashes.txt
+
+# Save compiler versions
+RUN uname -a > /out/toolchain-info.txt && \
+    gcc --version >> /out/toolchain-info.txt && \
+    ld --version >> /out/toolchain-info.txt && \
+    make --version >> /out/toolchain-info.txt && \
+    git --version >> /out/toolchain-info.txt && \
+    diff --version >> /out/toolchain-info.txt 
 
 # Original unstripped binary (final output)
 RUN cp /root/shim/shimx64.efi /out/
