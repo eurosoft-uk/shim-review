@@ -61,8 +61,8 @@ RUN aarch64-linux-gnu-objdump -d /tmp/ref-shim.efi | awk '/^Disassembly of secti
     diff -u /tmp/ref.dis /tmp/built.dis > /tmp/dis.diff || true
 
 # Section comparison logic
-RUN mkdir -p /out && \
-    check_and_diff_section() { \
+RUN mkdir -p /out 
+RUN check_and_diff_section() { \
         SECTION="$1"; FILE1="$2"; FILE2="$3"; NAME="$4"; \
         if aarch64-linux-gnu-objdump -h "$FILE1" | grep -q "$SECTION"; then \
             echo "🔍 Comparing section $SECTION"; \
@@ -71,7 +71,6 @@ RUN mkdir -p /out && \
             diff -u /tmp/ref.$NAME /tmp/built.$NAME > /out/${SECTION#\.}.diff || true; \
         else echo "⚠️  Section $SECTION not found, skipping."; fi; \
     }; \
-
     check_and_diff_section .rodata /tmp/ref-shim.efi /tmp/built-shim.efi rodata && \
     check_and_diff_section .sbat   /tmp/ref-shim.efi /tmp/built-shim.efi sbat && \
     check_and_diff_section .reloc  /tmp/ref-shim.efi /tmp/built-shim.efi reloc
@@ -80,7 +79,7 @@ RUN mkdir -p /out && \
 RUN cp /tmp/ref-shim.efi /out/shimaa64-reference.efi && \
     cp /tmp/built-shim.efi /out/shimaa64.efi && \
     cp /tmp/built-shim-stripped.efi /out/shimaa64-stripped.efi && \
-    cp /tmp/dis.diff /out/disassembly.diff
+    cp /tmp/dis.diff /out/disassemblyaa64.diff
 
 # Toolchain info
 RUN sha256sum /usr/bin/gcc /usr/bin/g++ /usr/bin/ld /usr/bin/objcopy /usr/bin/make /usr/bin/git > /out/toolchain-hashes.txt && \

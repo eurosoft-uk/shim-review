@@ -90,7 +90,7 @@ RUN mkdir -p /out && \
     cp /tmp/built-shim-stripped.efi /out/shimx64-stripped.efi && \
     cp /tmp/ref.dis /out/ref.dis && \
     cp /tmp/built.dis /out/built.dis && \
-    diff -u /tmp/ref.dis /tmp/built.dis > /out/disassembly.diff || true
+    diff -u "/tmp/ref.dis" "/tmp/built.dis" > "/out/disassemblyx64.diff" || true
 
 # Save toolchain metadata
 RUN sha256sum /usr/bin/gcc /usr/bin/g++ /usr/bin/ld /usr/bin/objcopy /usr/bin/make /usr/bin/git > /out/toolchain-hashes.txt && \
