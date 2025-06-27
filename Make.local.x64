@@ -1,0 +1,6 @@
+# Make.local
+DEFAULT_LOADER := \\\\esdiags-x64.efi
+DEFAULT_LOADER_CHAR := \\\\esdiags-x64.efi
+
+
+

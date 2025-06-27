@@ -41,8 +41,7 @@ RUN wget -q ${SHIM_TARBALL_URL} && \
 RUN tar xjf ${SHIM_TARBALL} && mv shim-${SHIM_VERSION} shim
 WORKDIR /root/shim
 
-RUN echo 'override DEFINES += -DDEFAULT_LOADER="L\"\\\\esdiags-aa64.efi\""' > Make.local && \
-    echo 'override DEFINES += -DDEFAULT_LOADER_CHAR="\"\\\\esdiags-aa64.efi\""' >> Make.local
+COPY Make.local.aa64 Make.local
 
 RUN make clean && \
     make CROSS_COMPILE=aarch64-linux-gnu- ARCH=aarch64 \
@@ -79,6 +78,8 @@ RUN check_and_diff_section() { \
 RUN cp /tmp/ref-shim.efi /out/shimaa64-reference.efi && \
     cp /tmp/built-shim.efi /out/shimaa64.efi && \
     cp /tmp/built-shim-stripped.efi /out/shimaa64-stripped.efi && \
+    cp /tmp/ref.dis /out/ref.dis && \
+    cp /tmp/built.dis /out/built.dis && \
     cp /tmp/dis.diff /out/disassemblyaa64.diff
 
 # Toolchain info

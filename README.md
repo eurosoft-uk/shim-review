@@ -23,7 +23,7 @@ Here's the template:
 ### What organization or people are asking to have this signed?
 *******************************************************************************
 Organization name and website:  
-[your text here]
+Eurosoft Uk Pvt Ltd.
 
 *******************************************************************************
 ### What's the legal data that proves the organization's genuineness?
@@ -137,7 +137,15 @@ You can also point to your custom git servers, where the code is hosted.
 ### What patches are being applied and why:
 Mention all the external patches and build process modifications, which are used during your building process, that make your shim binary be the exact one that you posted as part of this application.
 *******************************************************************************
-[your text here]
+
+## Custom Make.local
+
+This build overrides the default shim loader path to boot our diagnostic application `esdiags-aa64.efi`.
+
+```make
+override DEFINES += -DDEFAULT_LOADER="L\\esdiags-aa64.efi"
+override DEFINES += -DDEFAULT_LOADER_CHAR="\\esdiags-aa64.efi"
+
 
 *******************************************************************************
 ### Do you have the NX bit set in your shim? If so, is your entire boot stack NX-compatible and what testing have you done to ensure such compatibility?

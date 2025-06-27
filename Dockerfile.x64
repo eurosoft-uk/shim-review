@@ -49,8 +49,7 @@ RUN tar xjf ${SHIM_TARBALL} && mv shim-${SHIM_VERSION} shim
 WORKDIR /root/shim
 
 # Set loader overrides
-RUN echo 'override DEFINES += -DDEFAULT_LOADER="L\"\\\\esdiags-x64.efi\""' > Make.local && \
-    echo 'override DEFINES += -DDEFAULT_LOADER_CHAR="\"\\\\esdiags-x64.efi\""' >> Make.local
+COPY Make.local.x64 Make.local
 
 # Validate SBAT file
 RUN echo "${SBAT_SHA256}  ${SBAT_FILE}" | sha256sum -c -
@@ -69,6 +68,7 @@ RUN objdump -d /tmp/ref-shim.efi | awk '/^Disassembly of section .text:/,/^Disas
     objdump -d /tmp/built-shim.efi | awk '/^Disassembly of section .text:/,/^Disassembly of section/' > /tmp/built.dis && \
     diff -u /tmp/ref.dis /tmp/built.dis || (echo "❌ Disassembly mismatch!" && exit 1)
 
+RUN mkdir -p /out 
 # Section comparison function
 RUN check_and_diff_section() { \
     SECTION="$1"; FILE1="$2"; FILE2="$3"; NAME="$4"; \
@@ -84,8 +84,8 @@ check_and_diff_section .sbat   /tmp/ref-shim.efi /tmp/built-shim.efi sbat && \
 check_and_diff_section .reloc  /tmp/ref-shim.efi /tmp/built-shim.efi reloc
 
 # Save artifacts
-RUN mkdir -p /out && \
-    cp /tmp/ref-shim.efi /out/shimx64-reference.efi && \
+
+RUN cp /tmp/ref-shim.efi /out/shimx64-reference.efi && \
     cp /tmp/built-shim.efi /out/shimx64.efi && \
     cp /tmp/built-shim-stripped.efi /out/shimx64-stripped.efi && \
     cp /tmp/ref.dis /out/ref.dis && \
