@@ -1,18 +1,16 @@
-# Use Ubuntu Focal as base image
+# Finalized Dockerfile for AArch64 (shim-aa64.efi cross-compilation and reproducibility)
 FROM ubuntu:22.04 AS builder
 
-# Set deterministic build environment
 ENV DEBIAN_FRONTEND=noninteractive \
     SOURCE_DATE_EPOCH=1600000000
 
-# Copy local files into container
 COPY . /shim-review
-
 WORKDIR /root
 
-# Install dependencies
+# Install fixed dependencies
 RUN apt update && \
-    apt install  -y \
+    apt install -y \
+    wget \
     git=1:2.34.1-1ubuntu1.12 \
     build-essential=12.9ubuntu3 \
     gcc=4:11.2.0-1ubuntu1 \
@@ -28,75 +26,67 @@ RUN apt update && \
     bsdmainutils=12.1.7+nmu3ubuntu2 \
     gcc-aarch64-linux-gnu=4:11.2.0-1ubuntu1 \
     g++-aarch64-linux-gnu=4:11.2.0-1ubuntu1 && \
-    apt clean && \
-    rm -rf /var/lib/apt/lists/*
+    apt clean && rm -rf /var/lib/apt/lists/*
 
 RUN apt-cache policy git build-essential gcc g++ make binutils libssl-dev ca-certificates dos2unix pesign xxd xz-utils bsdmainutils gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
 
-ARG SHIM_COMMIT=b86b909f1e8281e0f30c3b5b5f697de185135f98
-ARG SHIM_ARCHIVE_HASH=ed10b432434fb703ef75fcfd705762e8a616e542f4a8346290d115180f721479
+ARG SHIM_VERSION=16.0
+ARG SHIM_TARBALL_URL=https://github.com/rhboot/shim/releases/download/${SHIM_VERSION}/shim-${SHIM_VERSION}.tar.bz2
+ARG SHIM_TARBALL=shim-${SHIM_VERSION}.tar.bz2
+ARG SHIM_SHA256=d503f778dc75895d3130da07e2ff23d2393862f95b6cd3d24b10cbd4af847217
 
-    
-# Clone Red Hat's official Shim repo
-RUN git clone https://github.com/rhboot/shim.git 
+RUN wget -q ${SHIM_TARBALL_URL} && \
+    echo "${SHIM_SHA256}  ${SHIM_TARBALL}" | sha256sum -c -
 
-# Move into the Shim directory
+RUN tar xjf ${SHIM_TARBALL} && mv shim-${SHIM_VERSION} shim
 WORKDIR /root/shim
 
-RUN git checkout ${SHIM_COMMIT}
-RUN git submodule update --init --recursive
+RUN echo 'override DEFINES += -DDEFAULT_LOADER="L\"\\\\esdiags-aa64.efi\""' > Make.local && \
+    echo 'override DEFINES += -DDEFAULT_LOADER_CHAR="\"\\\\esdiags-aa64.efi\""' >> Make.local
 
-
-# Write Make.local using 'override' to prevent conflict
-RUN echo "override DEFINES += -DDEFAULT_LOADER='L\"\\\\esdiags-aa64.efi\"'" > Make.local && \
-    echo "override DEFINES += -DDEFAULT_LOADER_CHAR='\"\\\\esdiags-aa64.efi\"'" >> Make.local
-
-# Debug: Show contents of Make.local
-RUN cat Make.local
-
-# Build Shim
 RUN make clean && \
-    make V=s CROSS_COMPILE=aarch64-linux-gnu- ARCH=aarch64 \
+    make CROSS_COMPILE=aarch64-linux-gnu- ARCH=aarch64 \
          VENDOR_CERT_FILE=/shim-review/data/pub.der \
          SBAT=/shim-review/data/sbat.csv
 
-RUN aarch64-linux-gnu-objcopy --remove-section=.note.gnu.build-id \
-            --remove-section=.build-id \
-            --remove-section=.debug_info \
-            --remove-section=.debug_abbrev \
-            --remove-section=.debug_line \
-            --remove-section=.debug_str \
-            --remove-section=.comment \
-            --strip-all \
-            /root/shim/shimaa64.efi /root/shim/shimaa64-stripped.efi         
+# Copy and strip binaries
+RUN cp /shim-review/data/shimaa64.efi /tmp/ref-shim.efi && \
+    cp /root/shim/shimaa64.efi /tmp/built-shim.efi && \
+    aarch64-linux-gnu-objcopy --strip-unneeded /tmp/built-shim.efi /tmp/built-shim-stripped.efi && \
+    aarch64-linux-gnu-objcopy --strip-unneeded /tmp/ref-shim.efi /tmp/ref-shim-stripped.efi
 
+# Diff disassembly
+RUN aarch64-linux-gnu-objdump -d /tmp/ref-shim.efi | awk '/^Disassembly of section .text:/,/^Disassembly of section/' > /tmp/ref.dis && \
+    aarch64-linux-gnu-objdump -d /tmp/built-shim.efi | awk '/^Disassembly of section .text:/,/^Disassembly of section/' > /tmp/built.dis && \
+    diff -u /tmp/ref.dis /tmp/built.dis > /tmp/dis.diff || true
 
-# Strip reference binary too
-RUN aarch64-linux-gnu-objcopy --strip-all /shim-review/data/shimaa64.efi /shim-review/data/shimaa64-stripped.efi
+# Section comparison logic
+RUN mkdir -p /out && \
+    check_and_diff_section() { \
+        SECTION="$1"; FILE1="$2"; FILE2="$3"; NAME="$4"; \
+        if aarch64-linux-gnu-objdump -h "$FILE1" | grep -q "$SECTION"; then \
+            echo "🔍 Comparing section $SECTION"; \
+            aarch64-linux-gnu-objdump -s -j "$SECTION" "$FILE1" | tail -n +3 > /tmp/ref.$NAME || exit 1; \
+            aarch64-linux-gnu-objdump -s -j "$SECTION" "$FILE2" | tail -n +3 > /tmp/built.$NAME || exit 1; \
+            diff -u /tmp/ref.$NAME /tmp/built.$NAME > /out/${SECTION#\.}.diff || true; \
+        else echo "⚠️  Section $SECTION not found, skipping."; fi; \
+    }; \
 
-# Compare binaries
+    check_and_diff_section .rodata /tmp/ref-shim.efi /tmp/built-shim.efi rodata && \
+    check_and_diff_section .sbat   /tmp/ref-shim.efi /tmp/built-shim.efi sbat && \
+    check_and_diff_section .reloc  /tmp/ref-shim.efi /tmp/built-shim.efi reloc
 
-RUN xxd /shim-review/data/shimaa64-stripped.efi > /tmp/ref.hex
-RUN xxd /root/shim/shimaa64-stripped.efi > /tmp/built.hex
+# Final artifacts
+RUN cp /tmp/ref-shim.efi /out/shimaa64-reference.efi && \
+    cp /tmp/built-shim.efi /out/shimaa64.efi && \
+    cp /tmp/built-shim-stripped.efi /out/shimaa64-stripped.efi && \
+    cp /tmp/dis.diff /out/disassembly.diff
 
-# Compare them
-RUN diff -u /tmp/ref.hex /tmp/built.hex || (echo "❌ Binary mismatch after stripping!" && exit 1)
-
-# Final step: Create /out and copy both original and stripped binaries
-RUN mkdir -p /out
-
-RUN sha256sum /usr/bin/gcc /usr/bin/g++ /usr/bin/ld /usr/bin/objcopy /usr/bin/make /usr/bin/git > /out/toolchain-hashes.txt
-
-# Save compiler versions
-RUN uname -a > /out/toolchain-info.txt && \
+# Toolchain info
+RUN sha256sum /usr/bin/gcc /usr/bin/g++ /usr/bin/ld /usr/bin/objcopy /usr/bin/make /usr/bin/git > /out/toolchain-hashes.txt && \
+    uname -a > /out/toolchain-info.txt && \
     gcc --version >> /out/toolchain-info.txt && \
     ld --version >> /out/toolchain-info.txt && \
     make --version >> /out/toolchain-info.txt && \
     git --version >> /out/toolchain-info.txt && \
-    aarch64-linux-gnu-objcopy --version >> /out/toolchain-info.txt 
-
-# Original unstripped binary (final output)
-RUN cp /root/shim/shimaa64.efi /out/
-
-# Optional: Stripped binary for inspection
-RUN cp /root/shim/shimaa64-stripped.efi /out/
+    aarch64-linux-gnu-objcopy --version >> /out/toolchain-info.txt

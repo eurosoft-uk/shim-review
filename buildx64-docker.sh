@@ -1,5 +1,5 @@
 # Build Docker image
-docker build -f Dockerfile.x64 -t shim-repro . 2>&1 | tee logs/buildx64.log
+docker build --no-cache -f Dockerfile.x64 -t shim-repro . 2>&1 | tee logs/buildx64.log
 
 # Run the container and extract the built binary
 docker create --name shim-container shim-repro
