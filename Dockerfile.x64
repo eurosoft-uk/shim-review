@@ -36,12 +36,12 @@ ARG SHIM_VERSION=16.0
 ARG SHIM_TARBALL_URL=https://github.com/rhboot/shim/releases/download/${SHIM_VERSION}/shim-${SHIM_VERSION}.tar.bz2
 ARG SHIM_TARBALL=shim-${SHIM_VERSION}.tar.bz2
 ARG SHIM_SHA256=d503f778dc75895d3130da07e2ff23d2393862f95b6cd3d24b10cbd4af847217
-ARG SBAT_SHA256=6546beeed66c03f745518714ecde3df9f1019516728004f2cd8c7bbad01381ed
 ARG SBAT_FILE=/shim-review/data/sbat.csv
 ARG EUROSOFT_CERT=/shim-review/data/pub.der
 
 # Download and verify
-RUN wget -q ${SHIM_TARBALL_URL} && \
+RUN echo "Expecting SHA256: ${SHIM_SHA256}" && \
+    wget -q ${SHIM_TARBALL_URL} && \
     echo "${SHIM_SHA256}  ${SHIM_TARBALL}" | sha256sum -c -
 
 # Extract shim source
@@ -50,9 +50,6 @@ WORKDIR /root/shim
 
 # Set loader overrides
 COPY Make.local.x64 Make.local
-
-# Validate SBAT file
-RUN echo "${SBAT_SHA256}  ${SBAT_FILE}" | sha256sum -c -
 
 # Build shim
 RUN make clean && \

@@ -24,6 +24,7 @@ Here's the template:
 *******************************************************************************
 Organization name and website:  
 Eurosoft Uk Pvt Ltd.
+https://www.eurosoft-uk.com
 
 *******************************************************************************
 ### What's the legal data that proves the organization's genuineness?
@@ -33,7 +34,9 @@ Provide the information, which can prove the genuineness with certainty.
 Company/tax register entries or equivalent:  
 (a link to the organization entry in your jurisdiction's register will do)  
 
-[your text here]
+Company number 01488751
+
+https://find-and-update.company-information.service.gov.uk/company/01488751
 
 The public details of both your organization and the issuer in the EV certificate used for signing .cab files at Microsoft Hardware Dev Center File Signing Services.  
 (**not** the CA certificate embedded in your shim binary)
@@ -45,22 +48,37 @@ Issuer: O=MyIssuer, Ltd., CN=MyIssuer EV Code Signing CA
 Subject: C=XX, O=MyCompany, Inc., CN=MyCompany, Inc.
 ```
 
-[your text here]
+Issuer: C = GB, O = Sectigo Limited, CN = Sectigo Public Code Signing CA EV R3
+Subject: serialNumber = 01488751, jurisdictionC = GB, businessCategory = Private Organization, C = GB, ST = Dorset, O = Eurosoft (UK) Ltd, CN = Eurosoft (UK) Ltd
 
 *******************************************************************************
 ### What product or service is this for?
 *******************************************************************************
-[your text here]
+esdiags-x64.efi    Eurosoft Hardware diagnostics X64     https://www.eurosoft-uk.com/products/pc-check-uefi-diagnostic-software/
+esdiags-aa64.efi   Eurosoft Hardware diagnostics Arm64
 
 *******************************************************************************
 ### What's the justification that this really does need to be signed for the whole world to be able to boot it?
 *******************************************************************************
-[your text here]
+Eurosoft develops diagnostic and testing solutions for PC hardware manufacturers, service providers, and enterprise IT environments. Our flagship products are designed to perform comprehensive hardware testing outside the operating system, booting directly from custom UEFI-based media (e.g., USB or PXE).
+
+Historically, Eurosoft has shipped a custom UEFI bootloader (euroloader.efi) since 2015, which launches our diagnostic tools in a secure and controlled environment. With the evolution of UEFI Secure Boot policies—especially Microsoft's requirement that third-party UEFI binaries must be signed through the UEFI CA—we can no longer reliably boot on systems with Secure Boot enabled unless our bootloader is signed accordingly.
+
+To comply with current requirements while minimizing deviations from standardized and auditable secure boot practices, Eurosoft has transitioned to using shim as the initial bootloader. This allows us to meet Secure Boot enforcement while maintaining a minimal, well-vetted, and upstream-compatible boot flow.
+
+Our shim binary is customized only to specify \esdiags-x64.efi our diagnostic suite as the bootable binary. This adaptation is essential for our products to keep operating across a wide range of Secure Boot-enabled devices.
+
+Therefore, signing this shim build is necessary to maintain compatibility, security, and operational continuity for legitimate use cases across global markets where Secure Boot is enabled by default.
 
 *******************************************************************************
 ### Why are you unable to reuse shim from another distro that is already signed?
 *******************************************************************************
-[your text here]
+
+Eurosoft develops UEFI-based diagnostic applications that run directly on bare-metal systems without using GRUB2, the Linux kernel, or any operating system. Our application (esdiags.efi) is a standalone UEFI executable launched directly by shim.
+
+Signed shim binaries from Linux distributions are designed to chain-load GRUB2 and enforce distribution-specific Secure Boot policies, including embedded signing keys, expected bootloaders, and SBAT entries. These assumptions conflict with our boot architecture, which does not rely on any Linux components or general-purpose OS boot stacks.
+
+We are not modifying or reusing a downstream bootloader, but rather using shim in its minimal form solely as a Microsoft-signed first-stage loader to enable Secure Boot compatibility for our existing product line. As such, we require our own signed shim that trusts our vendor certificate and launches our diagnostic suite directly, without further chaining.
 
 *******************************************************************************
 ### Who is the primary contact for security updates, etc.?
@@ -123,7 +141,14 @@ authentic, please confirm this here with a simple *yes*.
 
 A short guide on verifying public keys and signatures should be available in the [docs](./docs/) directory.
 *******************************************************************************
-[your text here]
+
+YES 
+
+For further details see Dockerfiles and build logs for comparison of checksums
+
+RUN echo "Expecting SHA256: ${SHIM_SHA256}" && \
+    wget -q ${SHIM_TARBALL_URL} && \
+    echo "${SHIM_SHA256}  ${SHIM_TARBALL}" | sha256sum -c -
 
 *******************************************************************************
 ### URL for a repo that contains the exact code which was built to result in your binary:
@@ -131,20 +156,28 @@ Hint: If you attach all the patches and modifications that are being used to you
 
 You can also point to your custom git servers, where the code is hosted.
 *******************************************************************************
-[your url here]
+(https://github.com/eurosoft-uk/shim-review)
 
 *******************************************************************************
 ### What patches are being applied and why:
 Mention all the external patches and build process modifications, which are used during your building process, that make your shim binary be the exact one that you posted as part of this application.
 *******************************************************************************
 
-## Custom Make.local
+####Custom Make.local  X64
 
-This build overrides the default shim loader path to boot our diagnostic application `esdiags-aa64.efi`.
+override DEFINES += -DDEFAULT_LOADER="L\\esdiags-x64.efi"
+override DEFINES += -DDEFAULT_LOADER_CHAR="\\esdiags-x64.efi"
 
-```make
+####Custom Make.local  aarch64
+
 override DEFINES += -DDEFAULT_LOADER="L\\esdiags-aa64.efi"
 override DEFINES += -DDEFAULT_LOADER_CHAR="\\esdiags-aa64.efi"
+
+####Vendor certificate
+VENDOR_CERT_FILE=${EUROSOFT_CERT} 
+
+####Sbat file
+SBAT=${SBAT_FILE}
 
 
 *******************************************************************************
@@ -158,7 +191,7 @@ See https://techcommunity.microsoft.com/t5/hardware-dev-center/nx-exception-for-
 ### What exact implementation of Secure Boot in GRUB2 do you have? (Either Upstream GRUB2 shim_lock verifier or Downstream RHEL/Fedora/Debian/Canonical-like implementation)
 Skip this, if you're not using GRUB2.
 *******************************************************************************
-[your text here]
+Not using GRUB2
 
 *******************************************************************************
 ### Do you have fixes for all the following GRUB2 CVEs applied?
@@ -203,21 +236,21 @@ Skip this, if you're not using GRUB2.
   * CVE-2023-4693
   * CVE-2023-4692
 *******************************************************************************
-[your text here]
+Not using GRUB2
 
 *******************************************************************************
 ### If shim is loading GRUB2 bootloader, and if these fixes have been applied, is the upstream global SBAT generation in your GRUB2 binary set to 4?
 Skip this, if you're not using GRUB2, otherwise do you have an entry in your GRUB2 binary similar to:  
 `grub,4,Free Software Foundation,grub,GRUB_UPSTREAM_VERSION,https://www.gnu.org/software/grub/`?
 *******************************************************************************
-[your text here]
+Not using GRUB2
 
 *******************************************************************************
 ### Were old shims hashes provided to Microsoft for verification and to be added to future DBX updates?
 ### Does your new chain of trust disallow booting old GRUB2 builds affected by the CVEs?
 If you had no previous signed shim, say so here. Otherwise a simple _yes_ will do.
 *******************************************************************************
-[your text here]
+Not using GRUB2
 
 *******************************************************************************
 ### If your boot chain of trust includes a Linux kernel:
@@ -227,31 +260,31 @@ If you had no previous signed shim, say so here. Otherwise a simple _yes_ will d
 Hint: upstream kernels should have all these applied, but if you ship your own heavily-modified older kernel version, that is being maintained separately from upstream, this may not be the case.  
 If you are shipping an older kernel, double-check your sources; maybe you do not have all the patches, but ship a configuration, that does not expose the issue(s).
 *******************************************************************************
-[your text here]
+No Linux Kernel
 
 *******************************************************************************
 ### How does your signed kernel enforce lockdown when your system runs
 ### with Secure Boot enabled?
 Hint: If it does not, we are not likely to sign your shim.
 *******************************************************************************
-[your text here]
+No Linux Kernel
 
 *******************************************************************************
 ### Do you build your signed kernel with additional local patches? What do they do?
 *******************************************************************************
-[your text here]
+No Linux Kernel
 
 *******************************************************************************
 ### Do you use an ephemeral key for signing kernel modules?
 ### If not, please describe how you ensure that one kernel build does not load modules built for another kernel.
 *******************************************************************************
-[your text here]
+No Linux Kernel
 
 *******************************************************************************
 ### If you use vendor_db functionality of providing multiple certificates and/or hashes please briefly describe your certificate setup.
 ### If there are allow-listed hashes please provide exact binaries for which hashes are created via file sharing service, available in public with anonymous access for verification.
 *******************************************************************************
-[your text here]
+Our embedded Certificate will be used by shim to verify esdiags-<arch>.efi application.
 
 *******************************************************************************
 ### If you are re-using the CA certificate from your last shim binary, you will need to add the hashes of the previous GRUB2 binaries exposed to the CVEs mentioned earlier to vendor_dbx in shim. Please describe your strategy.
@@ -259,7 +292,7 @@ This ensures that your new shim+GRUB2 can no longer chainload those older GRUB2 
 
 If this is your first application or you're using a new CA certificate, please say so here.
 *******************************************************************************
-[your text here]
+No GRUB2 loader.
 
 *******************************************************************************
 ### Is the Dockerfile in your repository the recipe for reproducing the building of your shim binary?
@@ -269,13 +302,43 @@ Hint: Prefer using *frozen* packages for your toolchain, since an update to GCC,
 
 If your shim binaries can't be reproduced using the provided Dockerfile, please explain why that's the case, what the differences would be and what build environment (OS and toolchain) is being used to reproduce this build? In this case please write a detailed guide, how to setup this build environment from scratch.
 *******************************************************************************
-[your text here]
+
+Yes
+
+####buildaa64-docker.sh    can build arch64 build
+docker build -f Dockerfile.aa64 -t shim-repro . 2>&1 | tee logs/buildaa64.log
+
+# Run the container and extract the built binary
+docker create --name shim-container shim-repro
+docker cp shim-container:/out/shimaa64.efi data/shimaa64.efi
+docker cp shim-container:/out/toolchain-hashes.txt hashes/toolchain-hashes_aa64.txt
+docker cp shim-container:/out/toolchain-info.txt hashes/toolchain-info_aa64.txt
+
+####buildx64-docker.sh     can build x64 binary
+docker build --no-cache -f Dockerfile.x64 -t shim-repro . 2>&1 | tee logs/buildx64.log
+
+# Run the container and extract the built binary
+docker create --name shim-container shim-repro
+docker cp shim-container:/out/shimx64.efi data/shimx64.efi
+docker cp shim-container:/out/toolchain-hashes.txt hashes/toolchain-hashes_x64.txt
+docker cp shim-container:/out/toolchain-info.txt hashes/toolchain-info_x64.txt
+
+####Reproducibility
+To ensure our shim.efi build is reproducible and traceable to the official shim-16.0 release, we perform:
+
+ - SHA256 checksum validation of the shim-16.0.tar.bz2 source.
+ - Disassembly comparison of the .text section between the reference and our build to confirm identical code generation.
+ - Binary section diffs for .rodata, .sbat, and .reloc to detect any non-code changes.
+
+These checks are integrated into our Docker build to guarantee transparency, reproducibility, and minimal deviation from the upstream release.
+
 
 *******************************************************************************
 ### Which files in this repo are the logs for your build?
 This should include logs for creating the buildroots, applying patches, doing the build, creating the archives, etc.
 *******************************************************************************
-[your text here]
+
+Logs folder has build logs of both X64 and arm64 docker builds for reproducibility and building binaries and copying to host.
 
 *******************************************************************************
 ### What changes were made in the distro's secure boot chain since your SHIM was last signed?
@@ -283,12 +346,18 @@ For example, signing new kernel's variants, UKI, systemd-boot, new certs, new CA
 
 Skip this, if this is your first application for having shim signed.
 *******************************************************************************
-[your text here]
+
+This is our First application.
 
 *******************************************************************************
 ### What is the SHA256 hash of your final shim binary?
 *******************************************************************************
-[your text here]
+6eb530dcd49e3cb9e5c62057f2700f533bb373be1cf7ba24147d7cabeadcb6e4  data/shimaa64.efi
+cc86a32b74f3ceda4dbc5e3eca7edc24a08b9daecdca3d40873d965b6129042f  data/shimx64.efi
+
+hash outputs of build are present in hashes folder namely 
+shimaa64.sha256
+shimx64.sha256
 
 *******************************************************************************
 ### How do you manage and protect the keys used in your shim?
@@ -300,7 +369,9 @@ Describe the security strategy that is used for key protection. This can range f
 ### Do you use EV certificates as embedded certificates in the shim?
 A _yes_ or _no_ will do. There's no penalty for the latter.
 *******************************************************************************
-[your text here]
+YES 
+
+We use EV certificate.
 
 *******************************************************************************
 ### Are you embedding a CA certificate in your shim?
@@ -309,7 +380,7 @@ if _yes_: does that certificate include the X509v3 Basic Constraints
 to say that it is a CA? See the [docs](./docs/) for more guidance
 about this.
 *******************************************************************************
-[your text here]
+No.
 
 *******************************************************************************
 ### Do you add a vendor-specific SBAT entry to the SBAT section in each binary that supports SBAT metadata ( GRUB2, fwupd, fwupdate, systemd-boot, systemd-stub, shim + all child shim binaries )?
@@ -322,7 +393,15 @@ If you are using a downstream implementation of GRUB2 (e.g. from Fedora or Debia
 
 Hint: run `objcopy --only-section .sbat -O binary YOUR_EFI_BINARY /dev/stdout` to get these entries. Paste them here. Preferably surround each listing with three backticks (\`\`\`), so they render well.
 *******************************************************************************
-[your text here]
+
+SHIM   
+sbat,1,SBAT Version,sbat,1,https://github.com/rhboot/shim/blob/main/SBAT.md
+shim,4,UEFI shim,shim,1,https://github.com/rhboot/shim
+shim.eurosoft,1,Eurosoft-UK,shim,1,mail:secalert@eurosoft-uk.com
+
+DIAGNOSTICS APPLICATION:     esdiags-<arch>.efi
+sbat,1,SBAT Version,sbat,1,https://github.com/rhboot/shim/blob/main/SBAT.md
+eurosoft.esdiags,1,Eurosoft-UK,esdiags-x64,1.0.0,mailto:mail:secalert@eurosoft-uk.com
 
 *******************************************************************************
 ### If shim is loading GRUB2 bootloader, which modules are built into your signed GRUB2 image?
@@ -330,45 +409,45 @@ Skip this, if you're not using GRUB2.
 
 Hint: this is about those modules that are in the binary itself, not the `.mod` files in your filesystem.
 *******************************************************************************
-[your text here]
+No GRUB2 loader.
 
 *******************************************************************************
 ### If you are using systemd-boot on arm64 or riscv, is the fix for [unverified Devicetree Blob loading](https://github.com/systemd/systemd/security/advisories/GHSA-6m6p-rjcq-334c) included?
 *******************************************************************************
-[your text here]
+No Systemd-boot.
 
 *******************************************************************************
 ### What is the origin and full version number of your bootloader (GRUB2 or systemd-boot or other)?
 *******************************************************************************
-[your text here]
+esdiags-<arch>.efi is a proprietary application of Eurosoft.
 
 *******************************************************************************
 ### If your shim launches any other components apart from your bootloader, please provide further details on what is launched.
 Hint: The most common case here will be a firmware updater like fwupd.
 *******************************************************************************
-[your text here]
+SHIM loads esdiags-<arch>.efi which performs hardware diagnostics, It doesnt load or execute any further application.
 
 *******************************************************************************
 ### If your GRUB2 or systemd-boot launches any other binaries that are not the Linux kernel in SecureBoot mode, please provide further details on what is launched and how it enforces Secureboot lockdown.
 Skip this, if you're not using GRUB2 or systemd-boot.
 *******************************************************************************
-[your text here]
+No GRUB2 or System-boot. 
 
 *******************************************************************************
 ### How do the launched components prevent execution of unauthenticated code?
 Summarize in one or two sentences, how your secure bootchain works on higher level.
 *******************************************************************************
-[your text here]
+Shim loader verifies esidags-<arch>.efi using the embedded certificate. and esdiags only performs diagnostics, it doesnt chain load.
 
 *******************************************************************************
 ### Does your shim load any loaders that support loading unsigned kernels (e.g. certain GRUB2 configurations)?
 *******************************************************************************
-[your text here]
+No
 
 *******************************************************************************
 ### What kernel are you using? Which patches and configuration does it include to enforce Secure Boot?
 *******************************************************************************
-[your text here]
+No Linux Kernel
 
 *******************************************************************************
 ### What contributions have you made to help us review the applications of other applicants?
@@ -378,9 +457,12 @@ A reasonable timeframe of waiting for a review can reach 2-3 months. Helping us 
 
 For newcomers, the applications labeled as [*easy to review*](https://github.com/rhboot/shim-review/issues?q=is%3Aopen+is%3Aissue+label%3A%22easy+to+review%22) are recommended to start the contribution process.
 *******************************************************************************
-[your text here]
+We are providing build scripts, which compare, calculate hashes, update and copy all the outputs to relevant folders for review and comparison.
 
 *******************************************************************************
 ### Add any additional information you think we may need to validate this shim signing application.
 *******************************************************************************
-[your text here]
+None to validate. We are requesting signing of two versions of shim for two architectures, X64 and Arm64, bianries are present in data folder as
+
+shimx64.efi
+shimaa64.efi

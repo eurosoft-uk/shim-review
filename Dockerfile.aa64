@@ -34,8 +34,11 @@ ARG SHIM_VERSION=16.0
 ARG SHIM_TARBALL_URL=https://github.com/rhboot/shim/releases/download/${SHIM_VERSION}/shim-${SHIM_VERSION}.tar.bz2
 ARG SHIM_TARBALL=shim-${SHIM_VERSION}.tar.bz2
 ARG SHIM_SHA256=d503f778dc75895d3130da07e2ff23d2393862f95b6cd3d24b10cbd4af847217
+ARG SBAT_FILE=/shim-review/data/sbat.csv
+ARG EUROSOFT_CERT=/shim-review/data/pub.der
 
-RUN wget -q ${SHIM_TARBALL_URL} && \
+RUN echo "Expecting SHA256: ${SHIM_SHA256}" && \
+    wget -q ${SHIM_TARBALL_URL} && \
     echo "${SHIM_SHA256}  ${SHIM_TARBALL}" | sha256sum -c -
 
 RUN tar xjf ${SHIM_TARBALL} && mv shim-${SHIM_VERSION} shim
@@ -89,4 +92,6 @@ RUN sha256sum /usr/bin/gcc /usr/bin/g++ /usr/bin/ld /usr/bin/objcopy /usr/bin/ma
     ld --version >> /out/toolchain-info.txt && \
     make --version >> /out/toolchain-info.txt && \
     git --version >> /out/toolchain-info.txt && \
-    aarch64-linux-gnu-objcopy --version >> /out/toolchain-info.txt
+    aarch64-linux-gnu-objcopy --version >> /out/toolchain-info.txt \
+    echo "VENDOR_CERT_FILE=${EUROSOFT_CERT}" >> /out/toolchain-info.txt && \
+    echo "SBAT_FILE=${SBAT_FILE}" >> /out/toolchain-info.txt
