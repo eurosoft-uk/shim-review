@@ -23,7 +23,7 @@ Here's the template:
 ### What organization or people are asking to have this signed?
 *******************************************************************************
 Organization name and website:  
-Eurosoft Uk Pvt Ltd.
+Eurosoft (UK) Ltd.
 https://www.eurosoft-uk.com
 
 *******************************************************************************
@@ -60,7 +60,7 @@ esdiags-aa64.efi   Eurosoft Hardware diagnostics Arm64
 *******************************************************************************
 ### What's the justification that this really does need to be signed for the whole world to be able to boot it?
 *******************************************************************************
-Eurosoft develops diagnostic and testing solutions for PC hardware manufacturers, service providers, and enterprise IT environments. Our flagship products are designed to perform comprehensive hardware testing outside the operating system, booting directly from custom UEFI-based media (e.g., USB or PXE).
+Eurosoft develops diagnostic and testing solutions for PC hardware manufacturers, service providers, refurbishers and enterprise IT environments. Our flagship products are designed to perform comprehensive hardware testing outside the operating system, booting directly from custom UEFI-based media (e.g., USB or PXE).
 
 Historically, Eurosoft has shipped a custom UEFI bootloader (euroloader.efi) since 2015, which launches our diagnostic tools in a secure and controlled environment. With the evolution of UEFI Secure Boot policies—especially Microsoft's requirement that third-party UEFI binaries must be signed through the UEFI CA—we can no longer reliably boot on systems with Secure Boot enabled unless our bootloader is signed accordingly.
 
@@ -87,9 +87,9 @@ The security contacts need to be verified before the shim can be accepted. For s
 An authorized reviewer will initiate contact verification by sending each security contact a PGP-encrypted email containing random words.
 You will be asked to post the contents of these mails in your `shim-review` issue to prove ownership of the email addresses and PGP keys.
 *******************************************************************************
-- Name:
-- Position:
-- Email address:
+- Name: James Ling
+- Position: Lead Software Engineer
+- Email address: jamesl@eurosoft-uk.com
 - PGP key fingerprint:
 
 (Key should be signed by the other security contacts, pushed to a keyserver
@@ -99,9 +99,9 @@ well known in the Linux community.)
 *******************************************************************************
 ### Who is the secondary contact for security updates, etc.?
 *******************************************************************************
-- Name:
-- Position:
-- Email address:
+- Name: Atta Ullah
+- Position: Senior Software Engineer
+- Email address: attau@eurosoft-uk.com
 - PGP key fingerprint:
 
 (Key should be signed by the other security contacts, pushed to a keyserver
@@ -185,7 +185,7 @@ SBAT=${SBAT_FILE}
 
 See https://techcommunity.microsoft.com/t5/hardware-dev-center/nx-exception-for-shim-community/ba-p/3976522 for more details on the signing of shim without NX bit.
 *******************************************************************************
-[your text here]
+No. (We are an in-market product.)
 
 *******************************************************************************
 ### What exact implementation of Secure Boot in GRUB2 do you have? (Either Upstream GRUB2 shim_lock verifier or Downstream RHEL/Fedora/Debian/Canonical-like implementation)
@@ -363,7 +363,7 @@ shimx64.sha256
 ### How do you manage and protect the keys used in your shim?
 Describe the security strategy that is used for key protection. This can range from using hardware tokens like HSMs or Smartcards, air-gapped vaults, physical safes to other good practices.
 *******************************************************************************
-[your text here]
+Our key is securely stored on a hardware token, ensuring a robust layer of physical protection against unauthorised access. Access to the key is rigorously restricted, with permissions granted only to a designated group of individuals who adhere to strict security protocols. This approach combines advanced technology with stringent controls to safeguard sensitive information effectively.
 
 *******************************************************************************
 ### Do you use EV certificates as embedded certificates in the shim?
@@ -425,7 +425,7 @@ esdiags-<arch>.efi is a proprietary application of Eurosoft.
 ### If your shim launches any other components apart from your bootloader, please provide further details on what is launched.
 Hint: The most common case here will be a firmware updater like fwupd.
 *******************************************************************************
-SHIM loads esdiags-<arch>.efi which performs hardware diagnostics, It doesnt load or execute any further application.
+SHIM loads esdiags-<arch>.efi which performs hardware diagnostics, it does not load or execute any further application.
 
 *******************************************************************************
 ### If your GRUB2 or systemd-boot launches any other binaries that are not the Linux kernel in SecureBoot mode, please provide further details on what is launched and how it enforces Secureboot lockdown.
@@ -437,7 +437,7 @@ No GRUB2 or System-boot.
 ### How do the launched components prevent execution of unauthenticated code?
 Summarize in one or two sentences, how your secure bootchain works on higher level.
 *******************************************************************************
-Shim loader verifies esidags-<arch>.efi using the embedded certificate. and esdiags only performs diagnostics, it doesnt chain load.
+Shim loader verifies esidags-<arch>.efi using the embedded certificate and esdiags only performs diagnostics, it does not chain load.
 
 *******************************************************************************
 ### Does your shim load any loaders that support loading unsigned kernels (e.g. certain GRUB2 configurations)?
@@ -462,7 +462,7 @@ We are providing build scripts, which compare, calculate hashes, update and copy
 *******************************************************************************
 ### Add any additional information you think we may need to validate this shim signing application.
 *******************************************************************************
-None to validate. We are requesting signing of two versions of shim for two architectures, X64 and Arm64, bianries are present in data folder as
+None to validate. We are requesting signing of two versions of shim for two architectures, X64 and Arm64, binaries are present in data folder as
 
 shimx64.efi
 shimaa64.efi
