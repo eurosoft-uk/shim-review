@@ -90,7 +90,7 @@ You will be asked to post the contents of these mails in your `shim-review` issu
 - Name: James Ling
 - Position: Lead Software Engineer
 - Email address: jamesl@eurosoft-uk.com
-- PGP key fingerprint:
+- PGP key fingerprint: 7EB5 CC20 FFA2 C97A 5FAA  F13A BA02 490D DF09 2A2A
 
 (Key should be signed by the other security contacts, pushed to a keyserver
 like keyserver.ubuntu.com, and preferably have signatures that are reasonably
@@ -102,7 +102,7 @@ well known in the Linux community.)
 - Name: Atta Ullah
 - Position: Senior Software Engineer
 - Email address: attau@eurosoft-uk.com
-- PGP key fingerprint:
+- PGP key fingerprint: 22AA 98F7 64D5 9D3C FF20  5BCE 2D0E 46A6 7A94 7C27
 
 (Key should be signed by the other security contacts, pushed to a keyserver
 like keyserver.ubuntu.com, and preferably have signatures that are reasonably
