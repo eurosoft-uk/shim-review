@@ -105,7 +105,7 @@ well known in the Linux community.)
 - Email address: attau@eurosoft-uk.com
 - PGP key fingerprint: 22AA 98F7 64D5 9D3C FF20  5BCE 2D0E 46A6 7A94 7C27
   Keys folder contains PGP file
-  
+
 (Key should be signed by the other security contacts, pushed to a keyserver
 like keyserver.ubuntu.com, and preferably have signatures that are reasonably
 well known in the Linux community.)
@@ -165,20 +165,22 @@ You can also point to your custom git servers, where the code is hosted.
 Mention all the external patches and build process modifications, which are used during your building process, that make your shim binary be the exact one that you posted as part of this application.
 *******************************************************************************
 
-####Custom Make.local  X64
+Custom Make.local  X64
 
 override DEFINES += -DDEFAULT_LOADER="L\\esdiags-x64.efi"
 override DEFINES += -DDEFAULT_LOADER_CHAR="\\esdiags-x64.efi"
 
-####Custom Make.local  aarch64
+
+Custom Make.local  aarch64
 
 override DEFINES += -DDEFAULT_LOADER="L\\esdiags-aa64.efi"
 override DEFINES += -DDEFAULT_LOADER_CHAR="\\esdiags-aa64.efi"
 
-####Vendor certificate
+
+VENDOR CERTIFICATE
 VENDOR_CERT_FILE=${EUROSOFT_CERT} 
 
-####Sbat file
+SBAT FILE
 SBAT=${SBAT_FILE}
 
 
@@ -307,25 +309,25 @@ If your shim binaries can't be reproduced using the provided Dockerfile, please 
 
 Yes
 
-####buildaa64-docker.sh    can build arch64 build
+Attached script buildaa64-docker.sh can build arch64 build
 docker build -f Dockerfile.aa64 -t shim-repro . 2>&1 | tee logs/buildaa64.log
 
-# Run the container and extract the built binary
+HOW TO BUILD AA64 binary.
 docker create --name shim-container shim-repro
 docker cp shim-container:/out/shimaa64.efi data/shimaa64.efi
 docker cp shim-container:/out/toolchain-hashes.txt hashes/toolchain-hashes_aa64.txt
 docker cp shim-container:/out/toolchain-info.txt hashes/toolchain-info_aa64.txt
 
-####buildx64-docker.sh     can build x64 binary
+Attached script buildx64-docker.sh can build x64 binary
 docker build --no-cache -f Dockerfile.x64 -t shim-repro . 2>&1 | tee logs/buildx64.log
 
-# Run the container and extract the built binary
+HOW TO BUILD X64 BINARY
 docker create --name shim-container shim-repro
 docker cp shim-container:/out/shimx64.efi data/shimx64.efi
 docker cp shim-container:/out/toolchain-hashes.txt hashes/toolchain-hashes_x64.txt
 docker cp shim-container:/out/toolchain-info.txt hashes/toolchain-info_x64.txt
 
-####Reproducibility
+REPRODUCIBILITY
 To ensure our shim.efi build is reproducible and traceable to the official shim-16.0 release, we perform:
 
  - SHA256 checksum validation of the shim-16.0.tar.bz2 source.

@@ -52,7 +52,7 @@ RUN make clean && \
          SBAT=/shim-review/data/sbat.csv
 
 # Copy and strip binaries
-RUN cp /shim-review/data/shimaa64.efi /tmp/ref-shim.efi && \
+RUN cp /shim-review/shimaa64.efi /tmp/ref-shim.efi && \
     cp /root/shim/shimaa64.efi /tmp/built-shim.efi && \
     aarch64-linux-gnu-objcopy --strip-unneeded /tmp/built-shim.efi /tmp/built-shim-stripped.efi && \
     aarch64-linux-gnu-objcopy --strip-unneeded /tmp/ref-shim.efi /tmp/ref-shim-stripped.efi

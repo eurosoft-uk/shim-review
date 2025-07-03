@@ -56,7 +56,7 @@ RUN make clean && \
     make V=s VENDOR_CERT_FILE=${EUROSOFT_CERT} SBAT=${SBAT_FILE}
 
 # Copy and strip binaries
-RUN cp /shim-review/data/shimx64.efi /tmp/ref-shim.efi && \
+RUN cp /shim-review/shimx64.efi /tmp/ref-shim.efi && \
     cp /root/shim/shimx64.efi /tmp/built-shim.efi && \
     objcopy --strip-unneeded /root/shim/shimx64.efi /tmp/built-shim-stripped.efi
 
