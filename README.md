@@ -314,7 +314,7 @@ docker build -f Dockerfile.aa64 -t shim-repro . 2>&1 | tee logs/buildaa64.log
 
 HOW TO BUILD AA64 binary.
 docker create --name shim-container shim-repro
-docker cp shim-container:/out/shimaa64.efi data/shimaa64.efi
+docker cp shim-container:/out/shimaa64.efi shimaa64.efi
 docker cp shim-container:/out/toolchain-hashes.txt hashes/toolchain-hashes_aa64.txt
 docker cp shim-container:/out/toolchain-info.txt hashes/toolchain-info_aa64.txt
 
@@ -323,7 +323,7 @@ docker build --no-cache -f Dockerfile.x64 -t shim-repro . 2>&1 | tee logs/buildx
 
 HOW TO BUILD X64 BINARY
 docker create --name shim-container shim-repro
-docker cp shim-container:/out/shimx64.efi data/shimx64.efi
+docker cp shim-container:/out/shimx64.efi shimx64.efi
 docker cp shim-container:/out/toolchain-hashes.txt hashes/toolchain-hashes_x64.txt
 docker cp shim-container:/out/toolchain-info.txt hashes/toolchain-info_x64.txt
 
@@ -356,8 +356,8 @@ This is our First application.
 *******************************************************************************
 ### What is the SHA256 hash of your final shim binary?
 *******************************************************************************
-6eb530dcd49e3cb9e5c62057f2700f533bb373be1cf7ba24147d7cabeadcb6e4  data/shimaa64.efi
-cc86a32b74f3ceda4dbc5e3eca7edc24a08b9daecdca3d40873d965b6129042f  data/shimx64.efi
+6eb530dcd49e3cb9e5c62057f2700f533bb373be1cf7ba24147d7cabeadcb6e4  shimaa64.efi
+cc86a32b74f3ceda4dbc5e3eca7edc24a08b9daecdca3d40873d965b6129042f  shimx64.efi
 
 hash outputs of build are present in hashes folder namely 
 shimaa64.sha256
@@ -403,7 +403,7 @@ sbat,1,SBAT Version,sbat,1,https://github.com/rhboot/shim/blob/main/SBAT.md
 shim,4,UEFI shim,shim,1,https://github.com/rhboot/shim
 shim.eurosoft,1,Eurosoft-UK,shim,1,mail:secalert@eurosoft-uk.com
 
-DIAGNOSTICS APPLICATION:     esdiags-<arch>.efi
+DIAGNOSTICS APPLICATION:     esdiags-<x64|aa64>.efi
 sbat,1,SBAT Version,sbat,1,https://github.com/rhboot/shim/blob/main/SBAT.md
 eurosoft.esdiags,1,Eurosoft-UK,esdiags-x64,1.0.0,mailto:mail:secalert@eurosoft-uk.com
 
@@ -466,7 +466,7 @@ We are providing build scripts, which compare, calculate hashes, update and copy
 *******************************************************************************
 ### Add any additional information you think we may need to validate this shim signing application.
 *******************************************************************************
-None to validate. We are requesting signing of two versions of shim for two architectures, X64 and Arm64, binaries are present in data folder as
+None to validate. We are requesting signing of two versions of shim for two architectures, X64 and Arm64, binaries are present in root folder as
 
 shimx64.efi
 shimaa64.efi
