@@ -356,8 +356,8 @@ This is our First application.
 *******************************************************************************
 ### What is the SHA256 hash of your final shim binary?
 *******************************************************************************
-6eb530dcd49e3cb9e5c62057f2700f533bb373be1cf7ba24147d7cabeadcb6e4  shimaa64.efi
-cc86a32b74f3ceda4dbc5e3eca7edc24a08b9daecdca3d40873d965b6129042f  shimx64.efi
+43b8b5cd57f935dd9ff1941950bfb1e6f8849cbedbf97c3dbce8dcbd9aaec1f9  shimaa64.efi
+b11f8ce5245d484ea366bbfe6285f3e121466ecb29d4d66a53e2d108916b6c9e  shimx64.efi
 
 hash outputs of build are present in hashes folder namely 
 shimaa64.sha256

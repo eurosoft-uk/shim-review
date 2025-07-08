@@ -49,7 +49,7 @@ COPY Make.local.aa64 Make.local
 RUN make clean && \
     make CROSS_COMPILE=aarch64-linux-gnu- ARCH=aarch64 \
          VENDOR_CERT_FILE=/shim-review/data/pub.der \
-         SBAT=/shim-review/data/sbat.csv
+         SBATPATH=/shim-review/data/sbat.csv
 
 # Copy and strip binaries
 RUN cp /shim-review/shimaa64.efi /tmp/ref-shim.efi && \

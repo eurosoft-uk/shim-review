@@ -53,7 +53,7 @@ COPY Make.local.x64 Make.local
 
 # Build shim
 RUN make clean && \
-    make V=s VENDOR_CERT_FILE=${EUROSOFT_CERT} SBAT=${SBAT_FILE}
+    make V=s VENDOR_CERT_FILE=${EUROSOFT_CERT} SBATPATH=${SBAT_FILE}
 
 # Copy and strip binaries
 RUN cp /shim-review/shimx64.efi /tmp/ref-shim.efi && \
